@@ -12,11 +12,11 @@ This example uses p5 preload function to create the classifier
 // Classifier Variable
 let classifier;
 // Model URL
-//let imageModelURL = 'https://teachablemachine.withgoogle.com/models/YFH20nUW/model.json';
-//let imageModelURL = 'https://teachablemachine.withgoogle.com/models/zd_XwkwT/model.json';
-// cups model https://teachablemachine.withgoogle.com/models/zd_XwkwT/
-//let imageModelURL = 'https://teachablemachine.withgoogle.com/models/zd_XwkwT/model.json';
-let imageModelURL = 'https://teachablemachine.withgoogle.com/models/' + 'R30ttzrJ' + '/model.json';
+//let imageModelURL = 'https://teachablemachine.withgoogle.com/models/' + 'R30ttzrJ' + '/model.json';
+let imageModelURL = 'https://teachablemachine.withgoogle.com/models/Qbz2Rcnf/';
+//let imageModelURL = './models/';
+
+
 
 // Video
 let cameraInput;
@@ -28,14 +28,14 @@ let label = "";
 let vid1;
 let vid2;
 let myVid;
-var startInteraction = false
+var readCameraInteractions = false
 
 
-let labelNames = ['glasses', 'pencil', 'no'];
+let labelNames = ['up', 'down', 'no'];
 
 let lastLabel = 'no';
 let labelChanged = false;
-
+let showContent = false;
 
 const RESET = 0;
 const INTRO = 1;
@@ -60,7 +60,7 @@ let myarray = [];
 
 // Load the model first
 function preload() {
-  classifier = ml5.imageClassifier(imageModelURL);
+  classifier = ml5.imageClassifier(imageModelURL+'model.json');
 }
 
 
@@ -79,7 +79,7 @@ function setup() {
     vid2.size(width, height);
     vid2.hide();
 
-    myVid = vid1;
+    //myVid = vid1;
 
     cameraInput = createCapture(VIDEO);
     cameraInput.size(width, height);
@@ -96,37 +96,43 @@ function setup() {
 
 function draw() {
 
-    if (!startInteraction){
-      text("NO Interaction", 50, 50);
-      console.log("HIDE"); 
-      return;
-    }
-    if (labelChanged){
+    if (readCameraInteractions && labelChanged){
       labelChanged = false;
-      stateManage();
     }
     
-    
-    showVideo(myVid,lastLabel);
+    if (showContent){
+      showVideo(myVid,lastLabel+" "+state);
+    }
+    else{  
+      if (!readCameraInteractions){
+        showDefaultScreen("No Interaction");
+      }
+      else{
+        showDefaultScreen("");
+      }
+      
+    }
+
+    stateManage();
 }
 
 function stateManage(){
   switch (state){
     case RESET:{
-      if (lastLabel == labelNames[0]){
-        changeState();
+      if (readCameraInteractions){
+        changeState(INTRO);
       }
       break;
     }
     case INTRO:{
-      if (lastLabel == labelNames[1]){
-        changeState();
+      if (readCameraInteractions && lastLabel == labelNames[0]){
+        changeState(STEP1);
       }
       break;
     }
     case STEP1:{
-      if (endOfMovie() || lastLabel == labelNames[2]){
-        changeState();
+      if (endOfMovie() || lastLabel == labelNames[1] || !readCameraInteractions){
+        changeState(RESET);
       }
       break;
     }
@@ -136,9 +142,9 @@ function stateManage(){
   }
 }
 
-function changeState(){
+function changeState(newState){
   exitState();
-  nextState();
+  state = newState;
   enterState();
 }
 
@@ -146,39 +152,22 @@ function endOfMovie(){
   return myVid.time() == myVid.duration();
 }
 
-function nextState(){
-  switch (state){
-    case RESET:{
-      state = INTRO;
-      break;
-    }
-    case INTRO:{
-      state = STEP1;
-      break;
-    }
-    case STEP1:{
-      state = RESET;
-      break;
-    }
-    default:{
-      state = RESET;
-    }
-  }
-}
-
-
 function enterState(){
   switch (state){
     case RESET:{
+      showContent = false;
+      readCameraInteractions = false;
       break;
     }
     case INTRO:{
       myVid = vid1;
+      myVid.time(0);
       myVid.loop();
       break;
     }
     case STEP1:{
       myVid = vid2;
+      myVid.time(0)
       myVid.play();
       break;
     }
@@ -192,14 +181,18 @@ function enterState(){
 function exitState(){
   switch (state){
     case RESET:{
+      showContent = true;
       break;
     }
     case INTRO:{
       myVid.pause();
+      myVid.hide();
       break;
     }
     case STEP1:{
       myVid.pause();
+      myVid.hide();
+      showContent = false;
       break;
     }
     default:{
@@ -207,7 +200,6 @@ function exitState(){
     }
   }
 }
-
 
 function showVideo(vid,textToShow) {
     background(0, 0, 0);
@@ -217,20 +209,15 @@ function showVideo(vid,textToShow) {
     text(textToShow, 50, 50);
 }
 
-
-
+function showDefaultScreen(textToShow) {
+  background(0, 0, 0);
+  fill(255, 255, 255);
+  textSize(32);
+  text(textToShow, width/2, height/1);
+}
 
 function mousePressed() {
-  startInteraction = !startInteraction
-  if (startInteraction){
-    console.log("PLAY"); 
-    myVid = vid1;
-    myVid.time(0);
-    myVid.play();
-  }
-  else{
-    myVid.pause();
-  }
+  readCameraInteractions = !readCameraInteractions
 }
 
 
